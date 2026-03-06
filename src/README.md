@@ -1,50 +1,127 @@
-# Mergington High School Activities API
+# Phase 1: Production Foundation Implementation
 
-A super simple FastAPI application that allows students to view and sign up for extracurricular activities.
+## Changes Made
 
-## Features
+This implementation completes Phase 1 of the activities management system, introducing:
 
-- View all available extracurricular activities
-- Sign up for activities
+### ✅ Persistent Database
+- Replaced in-memory `activities` dictionary with SQLAlchemy models
+- Uses SQLite database (`activities.db`) for persistence
+- Data persists across application restarts
 
-## Getting Started
+### ✅ User Authentication
+- JWT-based authentication with access tokens
+- Password hashing using bcrypt
+- Configurable token expiration (default 30 minutes)
+- OAuth2 authentication scheme
 
-1. Install the dependencies:
+### ✅ Role-Based Access Control
+- Three user roles: `STUDENT`, `ORGANIZER`, `ADMIN`
+- Role checks on sensitive endpoints
+- Users can only manage enrollments for themselves
+- Organizers/Admins can create and manage activities
 
-   ```
-   pip install fastapi uvicorn
-   ```
+### ✅ API Versioning & Contracts
+- All endpoints under `/api/v1/` namespace
+- Pydantic schemas for request/response validation
+- Consistent error responses with 4xx/5xx status codes
 
-2. Run the application:
+## New Files
 
-   ```
-   python app.py
-   ```
+| File | Purpose |
+|------|---------|
+| `models.py` | SQLAlchemy ORM models (User, Activity, enrollments) |
+| `database.py` | Database configuration and session management |
+| `auth.py` | Authentication and authorization utilities |
+| `schemas.py` | Pydantic request/response validation schemas |
+| `seed.py` | Database initialization script with demo data |
 
-3. Open your browser and go to:
-   - API documentation: http://localhost:8000/docs
-   - Alternative documentation: http://localhost:8000/redoc
+## Updated Files
+
+| File | Changes |
+|------|---------|
+| `app.py` | Complete refactor to use database, auth, and versioned endpoints |
+| `requirements.txt` | Added: sqlalchemy, pydantic, python-jose, passlib |
 
 ## API Endpoints
 
-| Method | Endpoint                                                          | Description                                                         |
-| ------ | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
-| GET    | `/activities`                                                     | Get all activities with their details and current participant count |
-| POST   | `/activities/{activity_name}/signup?email=student@mergington.edu` | Sign up for an activity                                             |
+### Authentication
 
-## Data Model
+```
+POST   /api/v1/auth/signup           # Register new user (student role)
+POST   /api/v1/auth/token            # Login and get JWT token
+GET    /api/v1/auth/me               # Get current user info (requires auth)
+```
 
-The application uses a simple data model with meaningful identifiers:
+### Activities (Public)
 
-1. **Activities** - Uses activity name as identifier:
+```
+GET    /api/v1/activities            # List all activities
+GET    /api/v1/activities/{id}       # Get activity details
+```
 
-   - Description
-   - Schedule
-   - Maximum number of participants allowed
-   - List of student emails who are signed up
+### Activity Management (Organizer/Admin only)
 
-2. **Students** - Uses email as identifier:
-   - Name
-   - Grade level
+```
+POST   /api/v1/activities            # Create activity
+PATCH  /api/v1/activities/{id}       # Update activity
+GET    /api/v1/activities/{id}/enrollments  # List enrollments
+```
 
-All data is stored in memory, which means data will be reset when the server restarts.
+### Enrollments (Authenticated users)
+
+```
+POST   /api/v1/activities/{id}/enroll    # Enroll in activity
+DELETE /api/v1/activities/{id}/enroll    # Unenroll from activity
+```
+
+## Getting Started
+
+### 1. Install dependencies
+```bash
+cd /workspaces/skills-integrate-mcp-with-copilot
+pip install -r requirements.txt
+```
+
+### 2. Seed the database
+```bash
+cd src
+python seed.py
+```
+
+### 3. Run the application
+```bash
+cd src
+uvicorn app:app --reload
+```
+
+Visit `http://localhost:8000` for the web interface or `http://localhost:8000/docs` for interactive API documentation.
+
+## Test Credentials
+
+The seed script creates demo users:
+
+| Role | Username | Password |
+|------|----------|----------|
+| Admin | `admin` | `admin123` |
+| Organizer | `organizer` | `organizer123` |
+| Student | `michael` | `student123` |
+| Student | `emma` | `student123` |
+| Student | `john` | `student123` |
+
+## Security Notes
+
+⚠️ **For development only**. Before production:
+- Change `SECRET_KEY` in `auth.py` to a strong random value
+- Use environment variables for sensitive configuration
+- Implement HTTPS
+- Add rate limiting
+- Implement CORS properly
+
+## Next Steps
+
+Phase 2 will add:
+- Activity capacity management and waitlist
+- Organizer approval workflow
+- Participant metadata and feedback
+- More advanced enrollment states
